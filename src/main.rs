@@ -66,12 +66,17 @@ struct OmniInfo {
 fn default_string() -> String {
 	"reference".to_string()
 }
+#[derive(Debug, Deserialize, Serialize)]
+struct RawTxn {
+	rawtx: String,
+}
 
 fn main() {
 	let mut router = Router::new();
 
 	router.post("/balance", move |r: &mut Request| get_balance(r), "get_balance");
 	router.post("/transactions", move |r: &mut Request| get_transactions(r), "get_transactions");
+	router.post("/broadcast", move |r: &mut Request| broadcast(r), "broadcast");
 	router.get("/blockheight", get_blockheight, "get_blockheight");
 
 	//route for get balance, accepts a public key, and a property identifier
@@ -86,6 +91,21 @@ fn main() {
 		
 
 		let output = balance.stdout;
+		let mut response = Response::with((status::Ok, output));
+		response.set_mut(Header(headers::AccessControlAllowOrigin::Any));	
+		response.set_mut(Header(headers::AccessControlAllowMethods(vec![Method::Post])));					
+		Ok(response)
+	}
+
+	fn broadcast(req: &mut Request) -> IronResult<Response> {
+		//todo get rid of unwraps
+		let mut payload = String::new();
+		req.body.read_to_string(&mut payload).unwrap();
+		let txn: RawTxn = serde_json::from_str(&payload).unwrap();
+		let output = Command::new("omnicore-cli").arg("sendrawtransaction").arg(txn.rawtx).output().expect("failed");
+		
+
+		let output = output.stdout;
 		let mut response = Response::with((status::Ok, output));
 		response.set_mut(Header(headers::AccessControlAllowOrigin::Any));	
 		response.set_mut(Header(headers::AccessControlAllowMethods(vec![Method::Post])));					
