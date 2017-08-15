@@ -95,6 +95,7 @@ fn main() {
 	router.post("/transactions", move |r: &mut Request| get_transactions(r), "get_transactions");
 	router.post("/broadcast", move |r: &mut Request| broadcast(r), "broadcast");
 	router.post("/unconfirmed", move |r: &mut Request| unconfirmed(r), "unconfirmed");
+	router.get("/getfee", move |r: &mut Request| getfee(r), "getfee");
 	router.get("/blockheight", get_blockheight, "get_blockheight");
 
 	//route for get balance, accepts a public key, and a property identifier
@@ -114,6 +115,19 @@ fn main() {
 		response.set_mut(Header(headers::AccessControlAllowMethods(vec![Method::Post])));					
 		Ok(response)
 	}
+
+	fn getfee(req: &mut Request) -> IronResult<Response> {
+
+		let fee = Command::new("omnicore-cli").arg("estimatefee").arg("6").output().expect("failed");
+		
+
+		let output = fee.stdout;
+		let mut response = Response::with((status::Ok, output));
+		response.set_mut(Header(headers::AccessControlAllowOrigin::Any));	
+		response.set_mut(Header(headers::AccessControlAllowMethods(vec![Method::Post])));					
+		Ok(response)
+	}
+
 
 	fn unconfirmed(req: &mut Request) -> IronResult<Response> {
 		//todo get rid of unwraps
