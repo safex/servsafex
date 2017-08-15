@@ -120,9 +120,9 @@ fn main() {
 
 		let fee = Command::new("omnicore-cli").arg("estimatefee").arg("6").output().expect("failed");
 		
-
-		let output = fee.stdout;
-		let mut response = Response::with((status::Ok, output));
+		 let mut s = String::from_utf8(fee.stdout).unwrap();
+    		s.pop();
+		let mut response = Response::with((status::Ok, s));
 		response.set_mut(Header(headers::AccessControlAllowOrigin::Any));	
 		response.set_mut(Header(headers::AccessControlAllowMethods(vec![Method::Post])));					
 		Ok(response)
