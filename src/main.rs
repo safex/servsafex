@@ -71,12 +71,30 @@ struct RawTxn {
 	rawtx: String,
 }
 
+#[derive(Debug, Deserialize, Serialize)]
+struct unconfirmedTransactions {
+	txid: String,
+	fee: String,
+	sendingaddress: String,
+	referenceaddress: String,
+	ismine: bool,
+	version: u32,
+	type_int: u32,
+	#[serde(rename = "type")]
+	type_type: String,
+	propertyid: u32,
+	divisible: bool,
+	amount: String,
+	confirmations: u32
+}
+
 fn main() {
 	let mut router = Router::new();
 
 	router.post("/balance", move |r: &mut Request| get_balance(r), "get_balance");
 	router.post("/transactions", move |r: &mut Request| get_transactions(r), "get_transactions");
 	router.post("/broadcast", move |r: &mut Request| broadcast(r), "broadcast");
+	router.post("/unconfirmed", move |r: &mut Request| unconfirmed(r), "unconfirmed");
 	router.get("/blockheight", get_blockheight, "get_blockheight");
 
 	//route for get balance, accepts a public key, and a property identifier
@@ -92,6 +110,30 @@ fn main() {
 
 		let output = balance.stdout;
 		let mut response = Response::with((status::Ok, output));
+		response.set_mut(Header(headers::AccessControlAllowOrigin::Any));	
+		response.set_mut(Header(headers::AccessControlAllowMethods(vec![Method::Post])));					
+		Ok(response)
+	}
+
+	fn unconfirmed(req: &mut Request) -> IronResult<Response> {
+		//todo get rid of unwraps
+		let mut payload = String::new();
+		req.body.read_to_string(&mut payload).unwrap();
+		let address: Address = serde_json::from_str(&payload).unwrap();
+		let output = Command::new("omnicore-cli").arg("omni_listpendingtransactions").arg(&address.address).output().expect("failed");
+		let output = String::from_utf8(output.stdout).unwrap();
+		let output: Vec<unconfirmedTransactions> = serde_json::from_str(&output).unwrap();
+		let mut pending_balance = 0;
+		for txn in output {
+			if address.address == txn.sendingaddress {
+				pending_balance -= txn.amount.parse::<i32>().unwrap();
+			} else {
+				pending_balance += txn.amount.parse::<i32>().unwrap();
+			}
+		}
+
+
+		let mut response = Response::with((status::Ok, pending_balance.to_string()));
 		response.set_mut(Header(headers::AccessControlAllowOrigin::Any));	
 		response.set_mut(Header(headers::AccessControlAllowMethods(vec![Method::Post])));					
 		Ok(response)
