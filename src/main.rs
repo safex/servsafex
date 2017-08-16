@@ -88,6 +88,11 @@ struct unconfirmedTransactions {
 	confirmations: u32
 }
 
+#[derive(Debug, Deserialize, Serialize)]
+struct Payload {
+	amount: String,
+}
+
 fn main() {
 	let mut router = Router::new();
 
@@ -96,6 +101,7 @@ fn main() {
 	router.post("/broadcast", move |r: &mut Request| broadcast(r), "broadcast");
 	router.post("/unconfirmed", move |r: &mut Request| unconfirmed(r), "unconfirmed");
 	router.get("/getfee", move |r: &mut Request| getfee(r), "getfee");
+	router.post("/getpayload", move |r: &mut Request| getfee(r), "getpayload");
 	router.get("/blockheight", get_blockheight, "get_blockheight");
 
 	//route for get balance, accepts a public key, and a property identifier
@@ -110,6 +116,22 @@ fn main() {
 		
 
 		let output = balance.stdout;
+		let mut response = Response::with((status::Ok, output));
+		response.set_mut(Header(headers::AccessControlAllowOrigin::Any));	
+		response.set_mut(Header(headers::AccessControlAllowMethods(vec![Method::Post])));					
+		Ok(response)
+	}
+
+	fn getpayload(req: &mut Request) -> IronResult<Response> {
+
+		//todo get rid of unwraps
+		let mut payload = String::new();
+		req.body.read_to_string(&mut payload).unwrap();
+		let payload: Payload = serde_json::from_str(&payload).unwrap();
+		let payload = Command::new("omnicore-cli").arg("omni_createpayload_simplesend").arg("56").arg(payload.amount).output().expect("failed");
+		
+
+		let output = payload.stdout;
 		let mut response = Response::with((status::Ok, output));
 		response.set_mut(Header(headers::AccessControlAllowOrigin::Any));	
 		response.set_mut(Header(headers::AccessControlAllowMethods(vec![Method::Post])));					
