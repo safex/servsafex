@@ -101,7 +101,7 @@ fn main() {
 	router.post("/broadcast", move |r: &mut Request| broadcast(r), "broadcast");
 	router.post("/unconfirmed", move |r: &mut Request| unconfirmed(r), "unconfirmed");
 	router.get("/getfee", move |r: &mut Request| getfee(r), "getfee");
-	router.post("/getpayload", move |r: &mut Request| getfee(r), "getpayload");
+	router.post("/getpayload", move |r: &mut Request| getpayload(r), "getpayload");
 	router.get("/blockheight", get_blockheight, "get_blockheight");
 
 	//route for get balance, accepts a public key, and a property identifier
