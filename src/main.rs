@@ -93,6 +93,12 @@ struct Payload {
 	amount: String,
 }
 
+#[derive(Debug, Deserialize, Serialize)]
+struct SafexTransaction {
+	incomplete_tx: String,
+	amount: String
+}
+
 fn main() {
 	let mut router = Router::new();
 
@@ -100,8 +106,8 @@ fn main() {
 	router.post("/transactions", move |r: &mut Request| get_transactions(r), "get_transactions");
 	router.post("/broadcast", move |r: &mut Request| broadcast(r), "broadcast");
 	router.post("/unconfirmed", move |r: &mut Request| unconfirmed(r), "unconfirmed");
+	router.post("/getsafextxn", move |r: &mut Request| getsafextxn(r), "getsafextxn");
 	router.get("/getfee", move |r: &mut Request| getfee(r), "getfee");
-	router.post("/getpayload", move |r: &mut Request| getpayload(r), "getpayload");
 	router.get("/blockheight", get_blockheight, "get_blockheight");
 
 	//route for get balance, accepts a public key, and a property identifier
@@ -122,25 +128,32 @@ fn main() {
 		Ok(response)
 	}
 
-	fn getpayload(req: &mut Request) -> IronResult<Response> {
-
+	fn getsafextxn(req: &mut Request) -> IronResult<Response> {
+		println!("hello");
 		//todo get rid of unwraps
 		let mut payload = String::new();
 		req.body.read_to_string(&mut payload).unwrap();
-		let payload: Payload = serde_json::from_str(&payload).unwrap();
-		let payload = Command::new("omnicore-cli").arg("omni_createpayload_simplesend").arg("56").arg(payload.amount).output().expect("failed");
-		
+		let parameters: SafexTransaction = serde_json::from_str(&payload).unwrap();
+		println!("{:?}", parameters);
+		let payload = Command::new("omnicore-cli").arg("omni_createpayload_simplesend").arg("56").arg(parameters.amount).output().expect("failed");
+		let mut payload = String::from_utf8(payload.stdout).unwrap();
+		payload.pop();
+		println!("{:?}", &payload);
 
-		let output = payload.stdout;
-		let mut response = Response::with((status::Ok, output));
+		let complete_txn = Command::new("omnicore-cli").arg("omni_createrawtx_opreturn").arg(parameters.incomplete_tx).arg(payload).output().expect("failed");
+		let mut complete_txn = String::from_utf8(complete_txn.stdout).unwrap();
+		complete_txn.pop();
+		println!("{:?}", &complete_txn);
+
+		let mut response = Response::with((status::Ok, complete_txn));
 		response.set_mut(Header(headers::AccessControlAllowOrigin::Any));	
 		response.set_mut(Header(headers::AccessControlAllowMethods(vec![Method::Post])));					
 		Ok(response)
 	}
 
-	fn getfee(req: &mut Request) -> IronResult<Response> {
+	fn getfee(_: &mut Request) -> IronResult<Response> {
 
-		let fee = Command::new("omnicore-cli").arg("estimatefee").arg("6").output().expect("failed");
+		let fee = Command::new("omnicore-cli").arg("estimatefee").arg("10").output().expect("failed");
 		
 		 let mut s = String::from_utf8(fee.stdout).unwrap();
     		s.pop();
