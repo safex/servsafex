@@ -17,6 +17,24 @@ use iron::modifiers::Header;
 use std::io::Read;
 use std::process::Command;
 
+
+	router.post("/balance", move |r: &mut Request| get_balance(r), "get_balance");
+	router.post("/transactions", move |r: &mut Request| get_transactions(r), "get_transactions");
+	router.post("/broadcast", move |r: &mut Request| broadcast(r), "broadcast");
+	router.post("/unconfirmed", move |r: &mut Request| unconfirmed(r), "unconfirmed");
+	router.post("/getsafextxn", move |r: &mut Request| getsafextxn(r), "getsafextxn");
+	router.get("/getfee", move |r: &mut Request| getfee(r), "getfee");
+	router.get("/blockheight", get_blockheight, "get_blockheight");
+
+
+//balance post
+//transactions post
+//broadcast post
+//unconfirmed post
+//get safex txn post
+//get fee 
+//get blockheight
+
 #[derive(Debug, Deserialize, Serialize)]
 struct Address {
     address: String
@@ -110,13 +128,25 @@ fn main() {
 	router.get("/getfee", move |r: &mut Request| getfee(r), "getfee");
 	router.get("/blockheight", get_blockheight, "get_blockheight");
 
+	router.post("/pull_safex_data", pull_safex_data, "pull_safex_data");
+
+	fn pull_safex_data(req: &mut Request) -> IronResult<Response> {
+		let mut payload = String::new();
+
+		req.body.read_to_string(&mut payload).expect("failed parsing payload");
+
+		let address: Address
+	}
 	//route for get balance, accepts a public key, and a property identifier
 
 	fn get_balance(req: &mut Request) -> IronResult<Response> {
 
 		//todo get rid of unwraps
 		let mut payload = String::new();
+
+
 		req.body.read_to_string(&mut payload).unwrap();
+
 		let address: Address = serde_json::from_str(&payload).unwrap();
 		let balance = Command::new("omnicore-cli").arg("omni_getbalance").arg(address.address).arg("56").output().expect("failed");
 		
